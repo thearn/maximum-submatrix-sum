@@ -3,7 +3,7 @@ maximum-submatrix-sum
 
 Python code to find the rectangular submatrix of maximum sum in a given M by N matrix, which is a [common algorithm exercise](http://stackoverflow.com/questions/2643908/getting-the-submatrix-with-maximum-sum).
 
-The solution presented here is unique, though not assymptotically optimal (see below). The heavy-lifting 
+The solution presented here is unique, though not asymptotically optimal (see below). The heavy-lifting 
 is actually performed by the FFT, which can be used to compute all possible sums
 of a submatrix of fixed size (thanks for the [Fourier convolution theorem](http://en.wikipedia.org/wiki/Convolution_theorem)). 
 
