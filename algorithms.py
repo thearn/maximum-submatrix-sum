@@ -2,9 +2,14 @@ from scipy.signal import fftconvolve as conv
 import numpy as np
 import itertools
 import time
+from typing import Tuple, Any, Iterator
 
+# Define type aliases for clarity
+SlicePair = Tuple[slice, slice]
+Numeric = Any  # Could be int or float, depending on numpy array type
+Location = Tuple[int, int] # For unravel_index output
 
-def local_search(A, loc):
+def local_search(A: np.ndarray, loc: SlicePair) -> Tuple[SlicePair, Numeric]:
     """
     Utility function to verify local optimality of a
     subarray slice specification 'loc' of array 'A'
@@ -15,64 +20,160 @@ def local_search(A, loc):
     Needed due to indeterminacy of precise indices corresponding
     to maximization of the convolution operation
     """
-    r1, r2, c1, c2 = loc[0].start, loc[0].stop, loc[1].start, loc[1].stop
-    mx = A[loc].sum()
+    r1_start: int = loc[0].start
+    r2_stop: int = loc[0].stop
+    c1_start: int = loc[1].start
+    c2_stop: int = loc[1].stop
+
+    mx: Numeric = A[loc].sum()
+    loc2: SlicePair = loc
+
     for i, j, k, l in itertools.product([-1, 0, 1], repeat=4):
-        loc_ = (slice(r1 + i, r2 + j), slice(c1 + k, c2 + l))
-        val = A[loc_].sum()
+        # Ensure slices do not go out of bounds, though Python handles negative/large slice indices gracefully
+        # For robustness, explicit checks could be added here if strict boundary adherence is needed
+        # However, standard slice behavior might be sufficient for this algorithm's purpose
+        current_r1 = r1_start + i
+        current_r2 = r2_stop + j
+        current_c1 = c1_start + k
+        current_c2 = c2_stop + l
+
+        # Ensure slice order is maintained (start <= stop)
+        if current_r1 > current_r2 or current_c1 > current_c2:
+            continue
+
+        loc_: SlicePair = (slice(current_r1, current_r2), slice(current_c1, current_c2))
+        
+        # Handle empty slices that can result from perturbations
+        if loc_[0].start == loc_[0].stop or loc_[1].start == loc_[1].stop:
+            val: Numeric = 0 # or handle as appropriate, e.g., continue
+        else:
+            val: Numeric = A[loc_].sum()
+
         if val >= mx:
             mx = val
             loc2 = loc_
     return loc2, mx
 
-
-def brute_submatrix_max(A):
+def brute_submatrix_max(A: np.ndarray) -> Tuple[SlicePair, Numeric, float]:
     """
     Searches for the rectangular subarray of A with maximum sum
     Uses brute force searching
     """
     M, N = A.shape
-    t0 = time.time()
-    this_location, max_value = ((0, 0), (0, 0)), 0
-    for m, n in itertools.product(xrange(M), xrange(N)):
-        for i, k in itertools.product(xrange(M - m + 1), xrange(N - n + 1)):
-            this_location = (slice(i, i + m), slice(k, k + n))
-            value = A[this_location].sum()
-            if value >= max_value:
-                max_value = value
-                location = this_location
-    t = time.time() - t0
+    t0: float = time.time()
+    location: SlicePair = (slice(0, 0), slice(0, 0)) # Default to an empty slice
+    max_value: Numeric = -np.inf # Initialize with a very small number or A.min() if appropriate
+
+    # Ensure there's at least one element to avoid issues with empty A
+    if M == 0 or N == 0:
+        return location, 0, time.time() - t0
+
+    max_value = A[slice(0,1), slice(0,1)].sum() # Initialize with the first element's sum
+
+    for m in range(1, M + 1): # Iterate over possible submatrix heights
+        for n in range(1, N + 1): # Iterate over possible submatrix widths
+            for r_start in range(M - m + 1): # Iterate over possible starting rows
+                for c_start in range(N - n + 1): # Iterate over possible starting columns
+                    this_location: SlicePair = (slice(r_start, r_start + m), slice(c_start, c_start + n))
+                    value: Numeric = A[this_location].sum()
+                    if value >= max_value:
+                        max_value = value
+                        location = this_location
+    t: float = time.time() - t0
     return location, max_value, t
 
-
-def fft_submatrix_max(A):
+def fft_submatrix_max(A: np.ndarray) -> Tuple[SlicePair, Numeric, float]:
     """
     Searches for the rectangular subarray of A with maximum sum
     Uses FFT-based convolution operations
     """
     M, N = A.shape
-    this_location, max_value = ((0, 0), (0, 0)), 0
-    t0 = time.time()
-    for m, n in itertools.product(xrange(2, M), xrange(2, N)):
-        convolved = conv(A, np.ones((m, n)), mode='same')
-        row, col = np.unravel_index(convolved.argmax(), convolved.shape)
-        # index offsets for odd dimension length:
-        if m % 2 == 1:
-            m_off = 1
-        else:
-            m_off = 0
-        if n % 2 == 1:
-            n_off = 1
-        else:
-            n_off = 0
+    location: SlicePair = (slice(0,0), slice(0,0)) # Default for empty or small arrays
+    max_value: Numeric = -np.inf
+    t0: float = time.time()
 
-        this_location = (
-            slice(row - m / 2, row + m / 2 + m_off), slice(col - n / 2, col + n / 2 + n_off))
-        value = A[this_location].sum()
+    if M < 2 or N < 2: # Convolution requires at least 2x2 for this setup
+        # Fallback to brute force or handle as an edge case
+        # For simplicity, returning default if too small for meaningful FFT
+        # Or, could call brute_submatrix_max for small arrays
+        if M > 0 and N > 0:
+             return brute_submatrix_max(A) # Or a simpler handler
+        return location, 0, time.time() - t0
 
-        if value >= max_value:
-            max_value = value
-            location = this_location
-    location, max_value = local_search(A, location)
-    t = time.time() - t0
+
+    max_value = A[slice(0,1), slice(0,1)].sum() # Initialize with the first element's sum
+    location = (slice(0,1), slice(0,1))
+
+
+    for m in range(1, M + 1): # Iterate from 1x1 up to MxN submatrices
+        for n in range(1, N + 1):
+            # Kernel for convolution
+            kernel = np.ones((m, n))
+            
+            # Perform convolution
+            # 'valid' mode ensures convolved output corresponds to sums of m x n submatrices
+            # 'same' mode pads, which might be what the original code intended with manual index adjustment
+            # Using 'valid' simplifies index mapping if the goal is direct submatrix sums
+            # If 'same' is kept, careful index adjustment is needed as in original
+            
+            # Reverting to 'same' to match original logic more closely, then adjusting indices
+            convolved: np.ndarray = conv(A, kernel, mode='same')
+            
+            # Find the maximum value in the convolved array
+            flat_idx: np.intp = convolved.argmax()
+            row_center, col_center = np.unravel_index(flat_idx, convolved.shape) # type: ignore
+
+            # Calculate slice indices based on center from 'same' convolution
+            # For 'same' mode, the peak corresponds to the top-left of the kernel aligned with that point
+            # The original code's index calculation seems to assume the peak is the center of the submatrix
+            
+            # Adjusting for 'same' mode where peak is top-left of kernel placement
+            # r_start = row_center - m // 2 # This is more for 'center' interpretation
+            # c_start = col_center - n // 2
+            
+            # If peak is top-left:
+            r_start = row_center
+            c_start = col_center
+            
+            # The original code's slice calculation:
+            # slice(row - m / 2, row + m / 2 + m_off), slice(col - n / 2, col + n / 2 + n_off)
+            # This implies the convolved peak (row, col) is treated as the center of the submatrix.
+            # Let's stick to that interpretation for now.
+            
+            m_half1 = m // 2
+            m_half2 = m - m_half1
+            n_half1 = n // 2
+            n_half2 = n - n_half1
+
+            # Potential slice indices
+            r1 = row_center - m_half1
+            r2 = row_center + m_half2
+            c1 = col_center - n_half1
+            c2 = col_center + n_half2
+            
+            # Ensure slices are within bounds of A
+            # This step is crucial if 'same' padding leads to centers near edges
+            r1 = max(0, r1)
+            c1 = max(0, c1)
+            r2 = min(M, r2) # slice goes up to M-1
+            c2 = min(N, c2) # slice goes up to N-1
+
+            if r1 >= r2 or c1 >= c2: # Invalid or empty slice
+                continue
+
+            this_location: SlicePair = (slice(r1, r2), slice(c1, c2))
+            
+            # Sum of the submatrix at this_location
+            # This sum is the actual value, not convolved.argmax()
+            current_sum: Numeric = A[this_location].sum()
+
+            if current_sum >= max_value:
+                max_value = current_sum
+                location = this_location
+                
+    # Final local search refinement if a valid location was found
+    if location != (slice(0,0), slice(0,0)) and max_value != -np.inf :
+        location, max_value = local_search(A, location)
+        
+    t: float = time.time() - t0
     return location, max_value, t
