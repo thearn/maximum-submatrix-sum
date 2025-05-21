@@ -4,7 +4,9 @@ import itertools
 import time
 
 
-def local_search(A, loc):
+from typing import Tuple, Any
+
+def local_search(A: np.ndarray, loc: Tuple[slice, slice]) -> Tuple[Tuple[slice, slice], float]:
     """
     Utility function to verify local optimality of a
     subarray slice specification 'loc' of array 'A'
@@ -26,7 +28,7 @@ def local_search(A, loc):
     return loc2, mx
 
 
-def brute_submatrix_max(A):
+def brute_submatrix_max(A: np.ndarray) -> Tuple[Tuple[slice, slice], float, float]:
     """
     Searches for the rectangular subarray of A with maximum sum
     Uses brute force searching
@@ -34,8 +36,8 @@ def brute_submatrix_max(A):
     M, N = A.shape
     t0 = time.time()
     this_location, max_value = ((0, 0), (0, 0)), 0
-    for m, n in itertools.product(xrange(M), xrange(N)):
-        for i, k in itertools.product(xrange(M - m + 1), xrange(N - n + 1)):
+    for m, n in itertools.product(range(M), range(N)):
+        for i, k in itertools.product(range(M - m + 1), range(N - n + 1)):
             this_location = (slice(i, i + m), slice(k, k + n))
             value = A[this_location].sum()
             if value >= max_value:
@@ -45,7 +47,7 @@ def brute_submatrix_max(A):
     return location, max_value, t
 
 
-def fft_submatrix_max(A):
+def fft_submatrix_max(A: np.ndarray) -> Tuple[Tuple[slice, slice], float, float]:
     """
     Searches for the rectangular subarray of A with maximum sum
     Uses FFT-based convolution operations
@@ -53,7 +55,7 @@ def fft_submatrix_max(A):
     M, N = A.shape
     this_location, max_value = ((0, 0), (0, 0)), 0
     t0 = time.time()
-    for m, n in itertools.product(xrange(2, M), xrange(2, N)):
+    for m, n in itertools.product(range(2, M), range(2, N)):
         convolved = conv(A, np.ones((m, n)), mode='same')
         row, col = np.unravel_index(convolved.argmax(), convolved.shape)
         # index offsets for odd dimension length:
@@ -67,7 +69,7 @@ def fft_submatrix_max(A):
             n_off = 0
 
         this_location = (
-            slice(row - m / 2, row + m / 2 + m_off), slice(col - n / 2, col + n / 2 + n_off))
+            slice(row - m // 2, row + m // 2 + m_off), slice(col - n // 2, col + n // 2 + n_off))
         value = A[this_location].sum()
 
         if value >= max_value:
