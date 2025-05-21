@@ -20,16 +20,11 @@ parts/
 sdist/
 var/
 wheels/
-pip-wheel-metadata/
-share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-MANIFEST
 
 # PyInstaller
-#  Usually these files are written by a script, but they may be committed to
-#  repositories by accident.
 *.manifest
 *.spec
 
@@ -42,14 +37,13 @@ htmlcov/
 .tox/
 .nox/
 .coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
 *.cover
 *.py,cover
 .hypothesis/
 .pytest_cache/
+nosetests.xml
+coverage.xml
+*.coveragerc
 
 # Translations
 *.mo
@@ -84,17 +78,10 @@ ipython_config.py
 # pyenv
 .python-version
 
-# PEP 582; __pypackages__ directory
-__pypackages__/
-
-# Celery stuff
+# celery beat schedule file
 celerybeat-schedule
-celerybeat.pid
 
-# SageMath parsed files
-*.sage.py
-
-# Environments
+# dotenv
 .env
 .venv
 env/
@@ -120,3 +107,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# VSCode
+.vscode/
