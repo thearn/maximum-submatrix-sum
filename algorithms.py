@@ -126,28 +126,27 @@ def fft_submatrix_max(A: np.ndarray) -> Tuple[Tuple[slice, slice], float, float]
     Uses FFT-based convolution operations
     """
     M, N = A.shape
-    this_location, max_value = ((0, 0), (0, 0)), 0
     t0 = time.time()
-    for m, n in itertools.product(range(2, M), range(2, N)):
+    location = None
+    max_value = -np.inf
+    for m, n in itertools.product(range(2, M+1), range(2, N+1)):
         convolved = conv(A, np.ones((m, n)), mode='same')
         row, col = np.unravel_index(convolved.argmax(), convolved.shape)
-        # index offsets for odd dimension length:
-        if m % 2 == 1:
-            m_off = 1
-        else:
-            m_off = 0
-        if n % 2 == 1:
-            n_off = 1
-        else:
-            n_off = 0
-
+        m_off = 1 if m % 2 == 1 else 0
+        n_off = 1 if n % 2 == 1 else 0
         this_location = (
-            slice(row - m // 2, row + m // 2 + m_off), slice(col - n // 2, col + n // 2 + n_off))
+            slice(max(row - m // 2, 0), min(row + m // 2 + m_off, M)),
+            slice(max(col - n // 2, 0), min(col + n // 2 + n_off, N))
+        )
         value = A[this_location].sum()
-
         if value >= max_value:
             max_value = value
             location = this_location
-    location, max_value = local_search(A, location)
+    if location is None:
+        index = np.unravel_index(np.argmax(A), A.shape)
+        location = (slice(index[0], index[0]+1), slice(index[1], index[1]+1))
+        max_value = A[index]
+    else:
+        location, max_value = local_search(A, location)
     t = time.time() - t0
     return location, max_value, t
