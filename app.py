@@ -71,10 +71,14 @@ with gr.Blocks(title="Maximum Submatrix Sum Calculator") as app:
     random_matrix_btn = gr.Button("Generate New Random Matrix")
     
     # Use a dataframe component for the matrix input/output
+    # Generate initial matrix and headers
+    initial_matrix = generate_random_matrix()
+    empty_headers = [""] * initial_matrix.shape[1]
     matrix_display = gr.Dataframe(
-        value=generate_random_matrix(),
+        value=initial_matrix,
         interactive=True,
-        label="Matrix (cells in max submatrix will be highlighted in green)"
+        label="Matrix (cells in max submatrix will be highlighted in green)",
+        headers=empty_headers
     )
     
     highlighted_matrix = gr.HTML(label="Highlighted Matrix")
