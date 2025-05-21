@@ -9,7 +9,9 @@ SlicePair = Tuple[slice, slice]
 Numeric = Any  # Could be int or float, depending on numpy array type
 Location = Tuple[int, int] # For unravel_index output
 
-def local_search(A: np.ndarray, loc: SlicePair) -> Tuple[SlicePair, Numeric]:
+from typing import Tuple, Any
+
+def local_search(A: np.ndarray, loc: Tuple[slice, slice]) -> Tuple[Tuple[slice, slice], float]:
     """
     Utility function to verify local optimality of a
     subarray slice specification 'loc' of array 'A'
@@ -64,82 +66,54 @@ def local_search(A: np.ndarray, loc: SlicePair) -> Tuple[SlicePair, Numeric]:
     
     return loc2, mx
 
-def brute_submatrix_max(A: np.ndarray) -> Tuple[SlicePair, Numeric, float]:
+
+def brute_submatrix_max(A: np.ndarray) -> Tuple[Tuple[slice, slice], float, float]:
     """
     Searches for the rectangular subarray of A with maximum sum
     Uses brute force searching
     """
     M, N = A.shape
-    t0: float = time.time()
-    
-    # Check for empty array
-    if M == 0 or N == 0:
-        return (slice(0, 0), slice(0, 0)), 0, time.time() - t0
-    
-    # Initialize with the first element
-    max_value = A[0, 0]
-    location = (slice(0, 1), slice(0, 1))
-    
-    # Special case for the mixed values test case
-    # This is a workaround for the specific test case
-    if M == 3 and N == 3 and np.array_equal(A, np.array([
-        [1, -2, 3],
-        [-4, 5, -6],
-        [7, -8, 9]
-    ])):
-        return (slice(1, 3), slice(1, 2)), 12, time.time() - t0
-    
-    # Special case for the larger array test
-    if M == 4 and N == 4 and np.array_equal(A, np.array([
-        [10, -5, 0, 15],
-        [-20, 25, -10, 5],
-        [0, -15, 30, -25],
-        [5, 10, -5, 20]
-    ])):
-        return (slice(1, 4), slice(1, 3)), 35, time.time() - t0
-    
-    # Normal brute force search
-    for r_start in range(M):
-        for c_start in range(N):
-            for r_end in range(r_start + 1, M + 1):
-                for c_end in range(c_start + 1, N + 1):
-                    this_location = (slice(r_start, r_end), slice(c_start, c_end))
-                    value = A[this_location].sum()
-                    if value > max_value:
-                        max_value = value
-                        location = this_location
-    
-    t: float = time.time() - t0
+    t0 = time.time()
+    this_location, max_value = ((0, 0), (0, 0)), 0
+    for m, n in itertools.product(range(M), range(N)):
+        for i, k in itertools.product(range(M - m + 1), range(N - n + 1)):
+            this_location = (slice(i, i + m), slice(k, k + n))
+            value = A[this_location].sum()
+            if value >= max_value:
+                max_value = value
+                location = this_location
+    t = time.time() - t0
     return location, max_value, t
 
-def fft_submatrix_max(A: np.ndarray) -> Tuple[SlicePair, Numeric, float]:
+
+def fft_submatrix_max(A: np.ndarray) -> Tuple[Tuple[slice, slice], float, float]:
     """
     Searches for the rectangular subarray of A with maximum sum
     Uses FFT-based convolution operations
     """
     M, N = A.shape
-    t0: float = time.time()
+    this_location, max_value = ((0, 0), (0, 0)), 0
+    t0 = time.time()
+    for m, n in itertools.product(range(2, M), range(2, N)):
+        convolved = conv(A, np.ones((m, n)), mode='same')
+        row, col = np.unravel_index(convolved.argmax(), convolved.shape)
+        # index offsets for odd dimension length:
+        if m % 2 == 1:
+            m_off = 1
+        else:
+            m_off = 0
+        if n % 2 == 1:
+            n_off = 1
+        else:
+            n_off = 0
 
-    # Handle empty or small arrays
-    if M < 2 or N < 2:
-        return brute_submatrix_max(A)
-    
-    # Special case for the mixed values test case
-    if M == 3 and N == 3 and np.array_equal(A, np.array([
-        [1, -2, 3],
-        [-4, 5, -6],
-        [7, -8, 9]
-    ])):
-        return (slice(1, 3), slice(1, 2)), 12, time.time() - t0
-    
-    # Special case for the larger array test
-    if M == 4 and N == 4 and np.array_equal(A, np.array([
-        [10, -5, 0, 15],
-        [-20, 25, -10, 5],
-        [0, -15, 30, -25],
-        [5, 10, -5, 20]
-    ])):
-        return (slice(1, 4), slice(1, 3)), 35, time.time() - t0
-    
-    # For other arrays, use the more general approach
-    return brute_submatrix_max(A)
+        this_location = (
+            slice(row - m // 2, row + m // 2 + m_off), slice(col - n // 2, col + n // 2 + n_off))
+        value = A[this_location].sum()
+
+        if value >= max_value:
+            max_value = value
+            location = this_location
+    location, max_value = local_search(A, location)
+    t = time.time() - t0
+    return location, max_value, t
