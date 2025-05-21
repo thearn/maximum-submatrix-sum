@@ -85,6 +85,40 @@ def brute_submatrix_max(A: np.ndarray) -> Tuple[Tuple[slice, slice], float, floa
     t = time.time() - t0
     return location, max_value, t
 
+def kidane_max_submatrix(A: np.ndarray) -> Tuple[Tuple[slice, slice], float, float]:
+    """
+    Searches for the rectangular subarray of A with maximum sum.
+    Uses Kidane's algorithm, a 2D extension of Kadane's algorithm.
+    """
+    M, N = A.shape
+    t0 = time.time()
+    max_sum = -np.inf
+    best_left = 0
+    best_right = 0
+    best_top = 0
+    best_bottom = 0
+    for left in range(N):
+        temp = np.zeros(M)
+        for right in range(left, N):
+            temp += A[:, right]
+            current_sum = 0
+            local_start = 0
+            for i in range(M):
+                current_sum += temp[i]
+                if current_sum > max_sum:
+                    max_sum = current_sum
+                    best_left = left
+                    best_right = right
+                    best_top = local_start
+                    best_bottom = i
+                if current_sum < 0:
+                    current_sum = 0
+                    local_start = i + 1
+    loc = (slice(best_top, best_bottom + 1), slice(best_left, best_right + 1))
+    loc, max_sum = local_search(A, loc)
+    t = time.time() - t0
+    return loc, max_sum, t
+
 
 def fft_submatrix_max(A: np.ndarray) -> Tuple[Tuple[slice, slice], float, float]:
     """

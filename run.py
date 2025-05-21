@@ -1,4 +1,4 @@
-from algorithms import brute_submatrix_max, fft_submatrix_max
+from algorithms import brute_submatrix_max, fft_submatrix_max, kidane_max_submatrix
 import numpy as np
 from typing import Tuple, Any
 
@@ -17,7 +17,9 @@ A: np.ndarray = np.random.randint(-100, 100, size=(M, N))
 # output format: maximizing subarray slice specification, maximum sum
 # value, running time
 print()
-print("Running FFT algorithm:")
-print(fft_submatrix_max(A))
 print("Running brute force algorithm:")
 print(brute_submatrix_max(A))
+print("Running FFT algorithm:")
+print(fft_submatrix_max(A))
+print("Running Kidane algorithm:")
+print(kidane_max_submatrix(A))
