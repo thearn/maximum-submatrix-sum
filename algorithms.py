@@ -74,8 +74,9 @@ def brute_submatrix_max(A: np.ndarray) -> Tuple[Tuple[slice, slice], float, floa
     """
     M, N = A.shape
     t0 = time.time()
-    this_location, max_value = ((0, 0), (0, 0)), 0
-    for m, n in itertools.product(range(M), range(N)):
+    location = (slice(0, 1), slice(0, 1))
+    max_value = A[0, 0]
+    for m, n in itertools.product(range(1, M+1), range(1, N+1)):
         for i, k in itertools.product(range(M - m + 1), range(N - n + 1)):
             this_location = (slice(i, i + m), slice(k, k + n))
             value = A[this_location].sum()
@@ -129,7 +130,7 @@ def fft_submatrix_max(A: np.ndarray) -> Tuple[Tuple[slice, slice], float, float]
     t0 = time.time()
     location = None
     max_value = -np.inf
-    for m, n in itertools.product(range(2, M+1), range(2, N+1)):
+    for m, n in itertools.product(range(1, M+1), range(1, N+1)):
         convolved = conv(A, np.ones((m, n)), mode='same')
         row, col = np.unravel_index(convolved.argmax(), convolved.shape)
         m_off = 1 if m % 2 == 1 else 0

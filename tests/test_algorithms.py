@@ -33,3 +33,23 @@ def test_kidane():
     # The best submatrix is expected to have a sum of 9.
     _, max_value, _ = algorithms.kidane_max_submatrix(matrix)
     assert max_value == 9
+
+def test_max_submatrix_sum():
+    matrix = np.array([
+        [ 4.6, -4.8,  1.2, -8.4,  9.7, -0.4, -8.3, -5.7, -3.2, -3.7],
+        [-4.0,  5.4,  5.6,  5.5,  3.4, -9.5,  5.0, -4.4,  2.9, -2.6],
+        [ 4.8,  7.7,  0.6, -6.4, -5.1, -2.4,  5.2,  6.0, -9.8, -5.8],
+        [-4.4, -5.2,  8.6, -1.9, -0.4, -7.2,  4.6,  5.5, -5.2,  7.2],
+        [ 6.0, -8.9,  2.7,  4.6, -9.8, -9.7, -3.8, -0.6,  3.2,  2.1],
+        [-6.5, -5.7,  0.9, -4.5, -5.7, -7.7,  9.6,  4.9, -4.3, -7.4],
+        [-4.5,  7.7,  4.5, -4.3,  0.5, -9.9, -0.5, -4.8, -1.8,  8.3],
+        [-5.9, -4.4,  8.3,  0.5,  9.4, -2.4, -4.3, -8.8, -0.5, -9.7],
+        [ 2.0, -3.9,  0.0, -7.0, -6.9,  3.8, -8.5, -5.0, -5.4, -2.9],
+        [ 0.5,  4.6, -7.7,  3.3,  5.3,  0.1,  0.0,  1.5,  8.4,  8.7]
+    ])
+    ret, max_value, _ = algorithms.brute_submatrix_max(matrix)
+    assert abs(max_value - 32.4) < 1e-6
+    ret, max_value, _ = algorithms.fft_submatrix_max(matrix)
+    assert abs(max_value - 32.4) < 1e-6
+    ret, max_value, _ = algorithms.kidane_max_submatrix(matrix)
+    assert abs(max_value - 32.4) < 1e-6
